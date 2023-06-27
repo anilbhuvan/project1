@@ -7,7 +7,7 @@ pipeline {
     stages {
         stage('Checkout SCM') {
             steps {
-                checkout scm
+                checkout scmGit(branches: [[name: '*/main']], extensions: [], userRemoteConfigs: [[url: 'https://github.com/anilbhuvan/project1']])
             }
         }
 
@@ -30,7 +30,8 @@ pipeline {
                     BUCKET_NAME="$(openssl rand -hex 12)"
                     echo $BUCKET_NAME > bucketname.txt
                     echo "Bucket name saved in $(pwd)/bucketname.txt"
-                    sed -i "s/BUCKET_NAME_PLACEHOLDER/$BUCKET_NAME/g" infra/variables.tf
+                    sed -i "s/*BUCKET_NAME_PLACEHOLDER*/$BUCKET_NAME/g" infra/backend.tf
+                    cat infra/backend.tf
                     aws s3api create-bucket --bucket $BUCKET_NAME --region us-east-1
                     aws s3api put-bucket-versioning --bucket $BUCKET_NAME --versioning-configuration Status=Enabled
 
@@ -41,6 +42,16 @@ pipeline {
                     --key-schema AttributeName=LockID,KeyType=HASH \
                     --provisioned-throughput ReadCapacityUnits=5,WriteCapacityUnits=5
                 '''
+            }  
+        }
+
+        stage('Sleep') {
+            when {
+                expression {
+                    return params.options == '1st-apply'
+                }
+            }
+            steps {
                 sleep(time: 2, unit: 'MINUTES')
             }  
         }
@@ -57,7 +68,7 @@ pipeline {
         stage(' terraform action') {
             when {
                 expression {
-                    return params.options == 'apply' OR 'destroy'
+                    return params.options == 'apply' || params.options == 'destroy'
                 }
             }
             steps {
