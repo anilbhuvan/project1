@@ -48,7 +48,9 @@ pipeline {
 
         stage('initialize Terraform') {
             steps {
-                sh 'terraform init'
+                dir('./infra/'){
+                    sh 'terraform init'
+                }
             }
         }
 
@@ -59,10 +61,12 @@ pipeline {
                 }
             }
             steps {
+                dir('./infra/'){
                 script {
                     def exitCode = sh(script: 'terraform plan -detailed-exitcode', returnStatus: true)
                     if (exitCode == 2) {
-                        sh "terraform $options --auto-approve"
+                            sh "terraform $options --auto-approve"
+                        }
                     }
                 }
             }
@@ -75,10 +79,12 @@ pipeline {
                 }
             }
             steps {
+                dir('./infra/'){
                 script {
                     def exitCode = sh(script: 'terraform plan -detailed-exitcode', returnStatus: true)
                     if (exitCode == 2) {
                         sh "terraform $options --auto-approve"
+                        }
                     }
                 }
             }
