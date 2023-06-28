@@ -11,15 +11,7 @@ pipeline {
             }
         }
 
-        stage('AWS Configuration') {
-            steps {
-                sh 'aws configure set region us-east-1'
-                sh 'aws configure set output yaml'
-            }  
-        }
-
-
-        stage('Creating s3 bucket and dynamodb table for terraform backend') {
+        stage('1st-apply Creating s3 bucket and dynamodb table for terraform backend') {
             when {
                 expression {
                     return params.options == '1st-apply'
@@ -45,7 +37,7 @@ pipeline {
             }  
         }
 
-        stage('Sleep') {
+        stage('1st-apply Sleep') {
             when {
                 expression {
                     return params.options == '1st-apply'
@@ -55,8 +47,46 @@ pipeline {
                 sleep(time: 2, unit: 'MINUTES')
             }  
         }
+
+        stage('1st-apply initialize Terraform') {
+            when {
+                expression {
+                    return params.options == '1st-apply'
+                }
+            }
+            steps {
+                dir('./infra/'){
+                    sh 'terraform init -reconfigure'
+                }
+            }
+        }
+
+        stage('1st-apply terraform apply') {
+            when {
+                expression {
+                    return params.options == '1st-apply'
+                }
+            }
+            steps {
+                dir('./infra/'){
+                script {
+                    def exitCode = sh(script: 'terraform plan -detailed-exitcode', returnStatus: true)
+                    if (exitCode == 2) {
+                        sh "terraform apply --auto-approve"
+                        }
+                    }
+                }
+            }
+        }
+
+
+
+
+
+
+
 // might have a problem with BUCKET_NAME var when you create multiple s3
-        stage('update backend file for apply and destroy') {
+        stage('apply-destroy update backend file') {
             when {
                 expression {
                     return params.options == 'apply' || params.options == 'destroy'
@@ -71,20 +101,9 @@ pipeline {
             }
         }
         
-        stage('initialize Terraform for 1st apply') {
-            when {
-                expression {
-                    return params.options == '1st-apply'
-                }
-            }
-            steps {
-                dir('./infra/'){
-                    sh 'terraform init -reconfigure'
-                }
-            }
-        }
 
-        stage('initialize Terraform') {
+
+        stage('apply-destroy initialize Terraform') {
             when {
                 expression {
                     return params.options == 'apply' || params.options == 'destroy'
@@ -97,7 +116,7 @@ pipeline {
             }
         }
         
-        stage(' terraform action') {
+        stage('apply-destroy terraform action') {
             when {
                 expression {
                     return params.options == 'apply' || params.options == 'destroy'
@@ -115,22 +134,6 @@ pipeline {
             }
         }
         
-        stage(' terraform apply for 1st time') {
-            when {
-                expression {
-                    return params.options == '1st-apply'
-                }
-            }
-            steps {
-                dir('./infra/'){
-                script {
-                    def exitCode = sh(script: 'terraform plan -detailed-exitcode', returnStatus: true)
-                    if (exitCode == 2) {
-                        sh "terraform apply --auto-approve"
-                        }
-                    }
-                }
-            }
-        }
+
     }
 }
