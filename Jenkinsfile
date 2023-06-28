@@ -30,7 +30,7 @@ pipeline {
                     BUCKET_NAME="$(openssl rand -hex 12)"
                     echo $BUCKET_NAME > bucketname.txt
                     echo "Bucket name saved in $(pwd)/bucketname.txt"
-                    sed -i "s/*BUCKET_NAME_PLACEHOLDER*/$BUCKET_NAME/g" infra/backend.tf
+                    sed -i "s/BUCKET_NAME_PLACEHOLDER/$BUCKET_NAME/g" infra/backend.tf
                     cat infra/backend.tf
                     aws s3api create-bucket --bucket $BUCKET_NAME --region us-east-1
                     aws s3api put-bucket-versioning --bucket $BUCKET_NAME --versioning-configuration Status=Enabled
@@ -55,16 +55,48 @@ pipeline {
                 sleep(time: 2, unit: 'MINUTES')
             }  
         }
-
-
-        stage('initialize Terraform') {
+// might have a problem with BUCKET_NAME var when you create multiple s3
+        stage('update backend file for apply and destroy') {
+            when {
+                expression {
+                    return params.options == 'apply' || params.options == 'destroy'
+                }
+            }
+            steps {
+                sh '''
+                BUCKET_NAME=$(aws s3 ls | awk '{print $3}')
+                sed -i "s/BUCKET_NAME_PLACEHOLDER/$BUCKET_NAME/g" infra/backend.tf
+                cat infra/backend.tf 
+                '''
+            }
+        }
+        
+        stage('initialize Terraform for 1st apply') {
+            when {
+                expression {
+                    return params.options == '1st-apply'
+                }
+            }
             steps {
                 dir('./infra/'){
-                    sh 'terraform init'
+                    sh 'terraform init -reconfigure'
                 }
             }
         }
 
+        stage('initialize Terraform') {
+            when {
+                expression {
+                    return params.options == 'apply' || params.options == 'destroy'
+                }
+            }
+            steps {
+                dir('./infra/'){
+                    sh 'terraform init '
+                }
+            }
+        }
+        
         stage(' terraform action') {
             when {
                 expression {
@@ -82,7 +114,7 @@ pipeline {
                 }
             }
         }
-
+        
         stage(' terraform apply for 1st time') {
             when {
                 expression {
@@ -94,7 +126,7 @@ pipeline {
                 script {
                     def exitCode = sh(script: 'terraform plan -detailed-exitcode', returnStatus: true)
                     if (exitCode == 2) {
-                        sh "terraform $options --auto-approve"
+                        sh "terraform apply --auto-approve"
                         }
                     }
                 }
