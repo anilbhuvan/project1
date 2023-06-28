@@ -90,10 +90,14 @@ touch /kubeadm_update
 
 
 # installing aws-cli
-sudo apt install python3-pip -y
-pip3 install awscli --upgrade --user
-echo 'export PATH=/home/ubuntu/.local/bin:$PATH' >> ~/.bashrc
-source ~/.bashrc
+apt update
+apt install unzip -y
+apt install curl -y
+
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+unzip awscliv2.zip
+sudo ./aws/install
+
 
 rm -rf /home/ubuntu/"configured-75%"
 touch /home/ubuntu/"configured-95%"

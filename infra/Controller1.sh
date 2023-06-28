@@ -129,22 +129,16 @@ EOF
 
 
 # installing aws-cli
-sudo apt install python3-pip -y
-pip3 install awscli --upgrade --user
-echo 'export PATH=/home/ubuntu/.local/bin:$PATH' >> ~/.bashrc
-source ~/.bashrc
+apt update
+apt install unzip -y
+apt install curl -y
+
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+unzip awscliv2.zip
+sudo ./aws/install
 
 
 JOIN_COMMAND=$(cat /home/ubuntu/join_command.txt) && aws ssm put-parameter --name "/k8s/join-command" --type "SecureString" --value "$JOIN_COMMAND" --region us-east-1
 
 
 touch /home/ubuntu/"configured-100%"
-
-
-
-
-
-
-
-
-
