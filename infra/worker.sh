@@ -88,5 +88,33 @@ export KUBECONFIG=/etc/kubernetes/admin.conf
 
 touch /kubeadm_update
 
+
+# installing aws-cli
+sudo apt install python3-pip -y
+pip3 install awscli --upgrade --user
+echo 'export PATH=/home/ubuntu/.local/bin:$PATH' >> ~/.bashrc
+source ~/.bashrc
+
 rm -rf /home/ubuntu/"configured-75%"
+touch /home/ubuntu/"configured-95%"
+
+# Retrieve the join command from the Parameter Store in a loop until it succeeds
+while true; do
+    JOIN_COMMAND=$(aws ssm get-parameter --name "/k8s/join-command" --with-decryption --query "Parameter.Value" --output text --region us-east-1)
+    if [ $? -eq 0 ]; then
+        eval "$JOIN_COMMAND"
+        if [ $? -eq 0 ]; then
+            echo "Successfully joined the cluster."
+            break
+        else
+            echo "Failed to join the cluster. Retrying in 5 seconds..."
+            sleep 5
+        fi
+    else
+        echo "Failed to retrieve join command. Retrying in 5 seconds..."
+        sleep 5
+    fi
+done
+
+rm -rf /home/ubuntu/"configured-95%"
 touch /home/ubuntu/"configured-100%"

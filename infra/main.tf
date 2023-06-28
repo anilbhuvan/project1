@@ -214,6 +214,40 @@ resource "aws_security_group" "worker_SG" {
   }
 }
 
+# create a IAM role
+resource "aws_iam_role" "role" {
+  name = "my-role"
+
+  assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": "sts:AssumeRole",
+      "Principal": {
+        "Service": "ec2.amazonaws.com"
+      },
+      "Effect": "Allow",
+      "Sid": ""
+    }
+  ]
+}
+EOF
+}
+
+
+# attach a policy to the role
+resource "aws_iam_role_policy_attachment" "role_policy_attachment" {
+  role       = aws_iam_role.role.name
+  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
+}
+
+# creating iam_instance_profile
+resource "aws_iam_instance_profile" "instance_profile" {
+  name = "my-instance-profile"
+  role = aws_iam_role.role.name
+}
+
 # create aws key pair
 resource "aws_key_pair" "k8s-key" {
   key_name   = "k8s-key"
@@ -242,6 +276,7 @@ resource "aws_instance" "kubernetes_controller" {
   subnet_id                   = aws_subnet.k8s_subnet.id
   associate_public_ip_address = true
   user_data                   = file("./Controller1.sh")
+  iam_instance_profile = aws_iam_instance_profile.instance_profile.name
   depends_on = [
     aws_key_pair.k8s-key
   ]
@@ -262,6 +297,7 @@ resource "aws_instance" "kubernetes_workers" {
   associate_public_ip_address = true
   for_each                    = toset(["k8s-worker1", "k8s-worker2"])
   user_data                   = file("./worker.sh")
+  iam_instance_profile = aws_iam_instance_profile.instance_profile.name
   depends_on = [
     aws_key_pair.k8s-key
   ]

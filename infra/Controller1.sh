@@ -128,16 +128,18 @@ Two EC2 Instances were already created and configured in your AWS, Use them as w
 EOF
 
 
+# installing aws-cli
+sudo apt install python3-pip -y
+pip3 install awscli --upgrade --user
+echo 'export PATH=/home/ubuntu/.local/bin:$PATH' >> ~/.bashrc
+source ~/.bashrc
 
 
+JOIN_COMMAND=$(cat /home/ubuntu/join_command.txt) && aws ssm put-parameter --name "/k8s/join-command" --type "SecureString" --value "$JOIN_COMMAND" --region us-east-1
 
-# touch /home/ubuntu/"configured-100%"
 
-# install ansible
-sudo apt-get install software-properties-common -y
-sudo apt-add-repository ppa:ansible/ansible -y
-sudo apt-get update
-sudo apt-get install ansible -y
+touch /home/ubuntu/"configured-100%"
+
 
 
 
